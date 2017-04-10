@@ -14,6 +14,6 @@ setup(
   author_email='porter.r.andrew@gmail.com',
   license=_license,
   url='https://github.com/AndrewRPorter/nasdaq-stock-quote',
-  download_url='https://github.com/AndrewRPorter/nasdaq-stock-quote/archive/0.1.tar.gz',
+  download_url='https://github.com/AndrewRPorter/nasdaq-stock-quote/releases',
   install_requires=['setuptools', 'requests', 'lxml'],
  )
