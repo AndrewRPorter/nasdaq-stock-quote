@@ -6,7 +6,7 @@ NASDAQ Common Stock Quote & Summary Data Scraper
 @author Andrew Porter
 '''
 class Share(object):
-    #Constructs ticker object, scraping the information from nasdaq.com/symbol/
+
     def __init__(self, name):
         self.name = name.upper().strip()
         self.page = requests.get("http://www.nasdaq.com/symbol/" + self.name)
