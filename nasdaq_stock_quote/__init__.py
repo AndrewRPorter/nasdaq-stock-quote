@@ -1,5 +1,6 @@
 from lxml import html
 import requests
+import sys
 
 '''
 NASDAQ Common Stock Quote & Summary Data Scraper
@@ -8,9 +9,13 @@ NASDAQ Common Stock Quote & Summary Data Scraper
 class Share(object):
 
     def __init__(self, name):
-        self.name = name.upper().strip()
-        self.page = requests.get("http://www.nasdaq.com/symbol/" + self.name)
-        self.tree = html.fromstring(self.page.content)
+        self.name = str(name).upper().strip()
+        try:
+            self.page = requests.get("http://www.nasdaq.com/symbol/" + self.name)
+            self.tree = html.fromstring(self.page.content)
+        except Exception as e:
+            print("ERROR:\n" + str(e.args) + "\n\nTerminating execution...")
+            sys.exit()
 
     '''
     The below functions scrape NASDAQ by creating a tree of html elements
@@ -162,3 +167,7 @@ class Share(object):
             return self.cap
         except IndexError:
             return None
+
+share = Share("nspr")
+print(share.get_price())
+print(share.get_market_cap())

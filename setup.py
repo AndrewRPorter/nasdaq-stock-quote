@@ -9,7 +9,7 @@ except:
 setup(
   name='nasdaq_stock_quote',
   packages=['nasdaq_stock_quote'],
-  version='1.1.0',
+  version='1.2.0',
   description='NASDAQ Common Stock Quote & Summary Data Scraper',
   author='Andrew Porter',
   author_email='porter.r.andrew@gmail.com',
