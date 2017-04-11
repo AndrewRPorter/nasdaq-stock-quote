@@ -167,7 +167,3 @@ class Share(object):
             return self.cap
         except IndexError:
             return None
-
-share = Share("nspr")
-print(share.get_price())
-print(share.get_market_cap())

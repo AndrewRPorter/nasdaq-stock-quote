@@ -9,12 +9,12 @@ except:
 setup(
   name='nasdaq_stock_quote',
   packages=['nasdaq_stock_quote'],
-  version='1.2.0',
+  version='1.2.1',
   description='NASDAQ Common Stock Quote & Summary Data Scraper',
   author='Andrew Porter',
   author_email='porter.r.andrew@gmail.com',
   license=_license,
   url='https://github.com/AndrewRPorter/nasdaq-stock-quote',
-  download_url='https://github.com/AndrewRPorter/nasdaq-stock-quote/archive/1.2.0.tar.gz',
+  download_url='https://github.com/AndrewRPorter/nasdaq-stock-quote/archive/1.2.1.tar.gz',
   install_requires=['setuptools', 'requests', 'lxml'],
  )
