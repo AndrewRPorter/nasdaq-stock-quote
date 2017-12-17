@@ -1,10 +1,11 @@
 from lxml import html
 import requests
 import sys
+import re
 
 '''
 NASDAQ Common Stock Quote & Summary Data Scraper
-@author Andrew Porter
+@author Andrew Porter / Tony Lucas
 '''
 class Share(object):
 
@@ -13,6 +14,9 @@ class Share(object):
         try:
             self.page = requests.get("http://www.nasdaq.com/symbol/" + self.name)
             self.tree = html.fromstring(self.page.content)
+            self.page_text = self.page.text
+            arrow = self.page_text.find('id="qwidget-arrow"')
+            self.arrow_direction = self.page_text[arrow+44:arrow+44+9]
         except Exception as e:
             print("ERROR:\n" + str(e.args) + "\n\nTerminating execution...")
             sys.exit()
@@ -23,147 +27,179 @@ class Share(object):
 
     The returned result is an array of Strings, if the String cannot be
     returned it should return a None type as that means that the requested
-    information may not be available for that specific ticker.
+    information may not be available for that specific ticker.  There are two
+    execptions to returning strings, the 52 Week High/Low and Today's High/Low.
+    These two results are returned as a float list.
     '''
-    def get_name(self):
-        return self.name
 
     def get_price(self):
-        self.price = self.tree.xpath("//div[@id='qwidget_lastsale']//text()")
+        price = self.tree.xpath("//div[@id='qwidget_lastsale']//text()")
         try:
-            self.price = self.price[0].replace(",","").replace("$","").strip()
-            return self.price
+            price = price[0].replace(",","").replace("$","").strip()
+            return price
         except IndexError:
             return None
 
     def get_price_change(self):
-        self.price_change = self.tree.xpath("//div[@id='qwidget_netchange']"+
+        price_change = self.tree.xpath("//div[@id='qwidget_netchange']"+
         "//text()")
         try:
-            self.price_change = self.price_change[0].replace(",","").strip()
-            return self.price_change
+            price_change = price_change[0].replace(",","").strip()
+            if self.arrow_direction == 'arrow-red':
+                price_change = '-' + price_change
+            return price_change
         except IndexError:
             return None
 
     def get_percent_change(self):
-        self.percent_change = self.tree.xpath("//div[@id='qwidget_percent']"+
+        percent_change = self.tree.xpath("//div[@id='qwidget_percent']"+
         "//text()")
         try:
-            self.percent_change = self.percent_change[0].replace(",","")
-            self.percent_change = self.percent_change.replace("%","")
-            self.percent_change = str(float(self.percent_change)/100).strip()
-            return self.percent_change
+            percent_change = percent_change[0].replace(",","")
+            percent_change = percent_change.replace("%","")
+            percent_change = str(float(percent_change)/100).strip()
+            if self.arrow_direction == 'arrow-red':
+                percent_change = '-' + percent_change
+            return percent_change
         except IndexError:
             return None
 
     def get_prev_close(self):
-        self.prev_close = self.tree.xpath("//*[@id='previous_close']/../../"+
-        "td[@align='right']//text()")
+        previous = self.page_text.find('Previous')
+        if previous == -1:
+            return 'Not Found'
         try:
-            self.prev_close = self.prev_close[0].replace("$","")
-            self.prev_close = self.prev_close.replace(",","").strip()
-            return self.prev_close
-        except IndexError:
+            prev_close = self.page_text[previous+606:previous+606+8].strip()
+            return prev_close
+        except:
+            return None
+        
+    def get_hi_lo(self):
+        todays_high_low = self.page_text.find('todays_high_low')
+        try:
+            hi_lo = self.page_text[todays_high_low+986:todays_high_low+986+40]
+            hi_lo = hi_lo.replace(',', '')
+            hi_lo = re.findall(r"[-+]?\d*\.\d+|\d+", hi_lo)
+            return hi_lo
+        except:
             return None
 
-    def get_day_high(self):
-        self.day_high = self.tree.xpath("//*[@id='todays_high_low']/../../"+
-        "td/label[@id='Label3']//text()")
+    def get_year_high_low(self):
+        year_week_hi_lo = self.page_text.find('52_week_high_low')
         try:
-            self.day_high = self.day_high[0].replace("$","").replace(",","")
-            self.day_high = self.day_high.strip()
-            return self.day_high
-        except IndexError:
+            year_high_low = self.page_text[year_week_hi_lo+1032:year_week_hi_lo+1032+40]
+            year_high_low = year_high_low.replace(',', '')
+            year_high_low = re.findall(r"[-+]?\d*\.\d+|\d+", year_high_low)
+            return year_high_low
+        except:
             return None
-
-    def get_day_low(self):
-        self.day_low = self.tree.xpath("//*[@id='todays_high_low']/../../td/"+
-        "label[@id='Label1']//text()")
-        try:
-            self.day_low = self.day_low[0].replace("$","").replace(",","")
-            self.day_low = self.day_low.strip()
-            return self.day_low
-        except IndexError:
-            return None
-
-    def get_year_high(self):
-        self.year_high = self.tree.xpath("//*[@id='52_week_high_low']/../../"+
-        "td[@align='right']//text()")
-        try:
-            self.year_high = self.year_high[0].replace("$","").replace(",","")
-            self.year_high = self.year_high.strip()
-            self.year_high = self.year_high[:self.year_high.find("/")].strip()
-            return self.year_high
-        except IndexError:
-            return None
-
-    def get_year_low(self):
-        self.year_low = self.tree.xpath("//*[@id='52_week_high_low']/../../"+
-        "td[@align='right']//text()")
-        try:
-            self.year_low = self.year_low[0].replace("$","").replace(",","")
-            self.year_low = self.year_low.strip()
-            self.year_low = self.year_low[self.year_low.find("/")+1:].strip()
-            return self.year_low
-        except IndexError:
-            return None
+            
 
     def get_volume(self):
-        self.volume = self.tree.xpath("//label[@id='"+self.name+"_Volume'"+
-        "]//text()")
+        share_volume = self.page_text.find('share_volume')
         try:
-            self.volume =  self.volume[0].replace(",","").strip()
-            return self.volume
-        except IndexError:
+            volume =  self.page_text[share_volume+816:share_volume+816+20].strip()
+            return volume
+        except:
             return None
 
-    def get_fifty_avg_volume(self):
-        self.fifty_avg_volume = self.tree.xpath("//*[@id='50_day_avg']/../"+
-        "../td[@align='right']//text()")
+    def get_ninety_avg_volume(self):
+        ninety_day_avg = self.page_text.find('90_day_avg')
+        if ninety_day_avg == -1:
+            ninety_day_avg = self.page_text.find('50_day_avg')
         try:
-            self.fifty_avg_volume = self.fifty_avg_volume[0].replace(",","")
-            self.fifty_avg_volume = self.fifty_avg_volume.strip()
-            return self.fifty_avg_volume
-        except IndexError:
+            ninety_avg_volume = self.page_text[ninety_day_avg+862:ninety_day_avg+862+20].strip()
+            return ninety_avg_volume
+        except:
             return None
 
     def get_price_earnings_ratio(self):
-        self.price_earnings = self.tree.xpath("//*[@id='pe_ratio']/../../"+
-        "td[@align='right']//text()")
+        pe_ratio = self.page_text.find('pe_ratio')
+        if pe_ratio == -1:
+            return 'N/A'
         try:
-            self.price_earnings = self.price_earnings[0].replace(",","")
-            self.price_earnings = self.price_earnings.strip()
-            if( self.price_earnings == "NE" ):
-                return None
-            return self.price_earnings
-        except IndexError:
+            price_earnings = self.page_text[pe_ratio+861:pe_ratio+861+12].strip()
+            return price_earnings
+        except:
             return None
 
     def get_eps(self):
-        self.eps = self.tree.xpath("//*[@id='eps']/../../td[@align='right']"+
-        "//text()")
+        eps_index = self.page_text.find('id="eps"')
+        if eps_index == -1:
+            return 'N/A'
         try:
-            self.eps = self.eps[0].replace(",","").replace("$","").strip()
-            return self.eps
-        except IndexError:
+            eps = self.page_text[eps_index+1218:eps_index+1218+8].strip()
+            return eps
+        except:
             return None
 
     def get_yield(self):
-        self.div_yield = self.tree.xpath("//*[@id='current_yield']/../../"+
-        "td[@align='right']//text()")
+        current_yield = self.page_text.find('current_yield')
         try:
-            self.div_yield = self.div_yield[0].replace(",","").replace("%","")
-            self.div_yield = str(float(self.div_yield)/100).strip()
-            return self.div_yield
-        except IndexError:
+            div_yield = self.page_text[current_yield+912:current_yield+912+5].strip()
+            return div_yield
+        except:
             return None
 
     def get_market_cap(self):
-        self.cap = self.tree.xpath("//*[@id='share_outstanding']/../../"+
-        "td[@align='right']//text()")
+        share_outstanding = self.page_text.find('share_outstanding')
         try:
-            self.cap = self.cap[0].replace("$","").replace(",","")
-            self.cap = self.cap.strip()
-            return self.cap
-        except IndexError:
+            cap = self.page_text[share_outstanding+1212:share_outstanding+1212+25].strip()
+            return cap
+        except:
+            return None
+        
+    def get_ex_dividend_date(self):
+        ex_dividend_date = self.page_text.find('ex_dividend_date')
+        try:
+            ex_div = self.page_text[ex_dividend_date+832:ex_dividend_date+832+15].strip()
+            return ex_div
+        except:
+            return None
+        
+    def get_forward_pe(self):
+        forward_PE = self.page_text.find('forward_PE')
+        if forward_PE == -1:
+            return 'N/A'
+        try:
+            fpe = self.page_text[forward_PE+934:forward_PE+934+12].strip()
+            return fpe
+        except:
+            return None
+        
+    def get_dividend(self):
+        annual = self.page_text.find('annualized_dividend')
+        if annual == -1:
+            return 'N/A'
+        try:
+            div_str = self.page_text[annual+703:annual+703+15].strip()
+            div_num = re.findall(r"[-+]?\d*\.\d+|\d+", div_str)
+            if len(div_num) == 0:                                
+                return 'N/A'                                     
+            else:                                                
+                self.div = str(div_num[0])
+                return self.div
+        except:
+            return None
+        
+    def get_dividend_date(self):
+        dividend_date = self.page_text.find('dividend_payment_date')
+        if dividend_date == -1:
+            return 'N/A'
+        try:
+            div_date = self.page_text[dividend_date+794:dividend_date+794+15].strip()
+            return div_date
+        except:
+            return None    
+        
+    def get_beta(self):
+        id_beta = self.page_text.find('id="beta"')
+        if id_beta == -1:
+            return 'N/A'
+        try:
+            beta = self.page_text[id_beta+934:id_beta+934+5].strip()
+            if beta == '0':
+                beta = 'N/A'
+            return beta
+        except:
             return None
