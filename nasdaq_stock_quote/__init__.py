@@ -8,7 +8,16 @@ NASDAQ Common Stock Quote & Summary Data Scraper
 @author Andrew Porter / Tony Lucas
 '''
 class Share(object):
+    '''
+    The below functions scrape NASDAQ by creating a tree of html elements
+    and traverse the tree looking for specific elements and tags.
 
+    The returned result is an array of Strings, if the String cannot be
+    returned it should return a None type as that means that the requested
+    information may not be available for that specific ticker.  There are two
+    execptions to returning strings, the 52 Week High/Low and Today's High/Low.
+    These two results are returned as a float list.
+    '''
     def __init__(self, name):
         self.name = str(name).upper().strip()
         try:
@@ -20,17 +29,6 @@ class Share(object):
         except Exception as e:
             print("ERROR:\n" + str(e.args) + "\n\nTerminating execution...")
             sys.exit()
-
-    '''
-    The below functions scrape NASDAQ by creating a tree of html elements
-    and traverse the tree looking for specific elements and tags.
-
-    The returned result is an array of Strings, if the String cannot be
-    returned it should return a None type as that means that the requested
-    information may not be available for that specific ticker.  There are two
-    execptions to returning strings, the 52 Week High/Low and Today's High/Low.
-    These two results are returned as a float list.
-    '''
 
     def get_price(self):
         price = self.tree.xpath("//div[@id='qwidget_lastsale']//text()")
